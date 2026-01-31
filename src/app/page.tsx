@@ -1,124 +1,128 @@
 'use client';
 
+import React, { useState } from 'react';
 import { useLaunchSwarm, useStopSwarm, useSwarmStatus } from "@/hooks/use-swarm";
 import { useQueryClient } from "@tanstack/react-query";
 import { IntelligenceFeed } from "@/components/intelligence-feed";
+import { AppSidebar } from "@/components/app-sidebar";
+import { SeriesViewer } from "@/components/series-viewer";
+import { LandingExtensions } from "@/components/landing-extensions";
 
 /**
  * THE DINING TABLE (MAIN PAGE)
- * This is a super clean page. No URLs. No fetch calls.
- * It just uses our "Remote Control" hooks to talk to the kitchen.
+ * Streamlined version: Controls moved to header, Hero removed.
  */
 export default function Home() {
   const queryClient = useQueryClient();
+  const [activeDepartment, setActiveDepartment] = useState('all');
+  const [activeView, setActiveView] = useState('feed'); // 'feed' | 'episode'
+  const [selectedEpisodeId, setSelectedEpisodeId] = useState<string | undefined>(undefined);
 
-  // 1. THE HEARTBEAT: We ask the backend "Is a swarm running?"
+  // Status and Controls
   const { data: status, isLoading: isStatusLoading } = useSwarmStatus();
-
-  // 2. THE REMOTE CONTROLS: For starting and stopping.
   const { mutate: launchSwarm, isPending: isLaunching } = useLaunchSwarm();
   const { mutate: stopSwarm, isPending: isStopping } = useStopSwarm();
 
-  // We check if the swarm is currently active according to the backend.
   const isSwarmActive = status?.active || false;
 
+  const handleNavigate = (dept: string, view: string, episodeId?: string) => {
+    setActiveDepartment(dept);
+    setActiveView(view);
+    setSelectedEpisodeId(episodeId);
+  };
+
   return (
-    <main className="min-h-screen bg-white text-zinc-900 font-sans antialiased selection:bg-indigo-100">
+    <div className="flex min-h-screen bg-white">
+      {/* SIDEBAR */}
+      <AppSidebar
+        activeDepartment={activeDepartment}
+        activeView={activeView}
+        selectedEpisodeId={selectedEpisodeId}
+        onNavigate={handleNavigate}
+      />
 
-      {/* MINIMALIST HEADER */}
-      <nav className="max-w-7xl mx-auto px-6 py-8 flex justify-between items-center border-b border-zinc-100/10">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-zinc-950 rounded shadow-sm flex items-center justify-center font-bold text-white text-xs">I</div>
-          <span className="font-semibold tracking-tight text-lg">Infomly Intelligence</span>
-        </div>
-        <div className="text-[10px] font-medium tracking-[0.2em] text-zinc-400 uppercase">
-          Neural Node 01
-        </div>
-      </nav>
+      {/* CONTENT AREA */}
+      <main className="flex-grow pl-64 transition-all">
 
-      {/* HERO SECTION - Investor Ready */}
-      <div className="max-w-4xl mx-auto px-6 py-32 text-center">
-        <h1 className="text-6xl font-bold tracking-tight text-zinc-950 mb-6 leading-[1.1]">
-          High-frequency forensic <br />
-          <span className="text-indigo-600 italic font-serif">intelligence swarms</span>.
-        </h1>
-
-        <p className="text-lg text-zinc-500 max-w-xl mx-auto mb-12 font-medium leading-relaxed">
-          Orchestrate up to 100 decentralized sub-agents to synthesize
-          institution-grade dossiers in parallel.
-        </p>
-
-        {/* STRIPE-LIKE TRIGGER BUTTONS */}
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => launchSwarm()}
-              disabled={isLaunching || isStopping || isSwarmActive}
-              className={`
-                relative overflow-hidden group
-                px-8 py-3 rounded-md font-semibold text-sm transition-all duration-200
-                ${isLaunching
-                  ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed border border-zinc-200'
-                  : isSwarmActive
-                    ? 'bg-green-600 text-white border border-green-700 shadow-md cursor-default'
-                    : 'bg-zinc-950 text-white hover:bg-zinc-800 border border-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.1)] active:scale-[0.98]'
-                }
-              `}
-            >
-              <div className="flex items-center gap-2">
-                {isLaunching && (
-                  <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                )}
-                <span>
-                  {isLaunching ? 'Deploying Parallel Agents...' : isSwarmActive ? 'Swarm in Progress' : 'Execute Intelligent Batch'}
-                </span>
-              </div>
-            </button>
-
-            {/* THE STOP BUTTON (KILL-SWITCH) */}
-            <button
-              onClick={() => stopSwarm()}
-              disabled={isLaunching || isStopping || !isSwarmActive}
-              className={`
-                px-8 py-3 rounded-md font-semibold text-sm transition-all duration-200
-                border border-zinc-200 text-zinc-600 hover:bg-red-50 hover:text-red-700 hover:border-red-100
-                disabled:opacity-30 disabled:cursor-not-allowed
-              `}
-            >
-              <div className="flex items-center gap-2">
-                {isStopping && (
-                  <div className="w-3 h-3 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin"></div>
-                )}
-                <span>{isStopping ? 'Recalling...' : 'Abort Mission'}</span>
-              </div>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-medium">
-            <span className={`w-1.5 h-1.5 rounded-full ${isLaunching ? 'bg-amber-400 animate-pulse' : isSwarmActive ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-300'}`}></span>
-            API STATUS: {isLaunching ? 'DEPLOYING' : isStopping ? 'STOPPING' : isSwarmActive ? 'FIELD ANALYSIS' : 'IDLE'}
-          </div>
-
-          {isSwarmActive && status?.progress && (
-            <div className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mt-2">
-              Agents: {status.progress.pending} Pending | {status.progress.total} Total
+        {/* STRATEGIC HEADER - NOW WITH CONTROLS */}
+        <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-md px-10 py-4 flex justify-between items-center border-b border-zinc-100/50">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => handleNavigate('all', 'feed')}>
+            <div className="w-8 h-8 bg-zinc-950 rounded shadow-sm flex items-center justify-center font-bold text-white text-xs">I</div>
+            <div className="flex flex-col">
+              <span className="font-bold tracking-tight text-sm text-zinc-950 leading-none">Infomly</span>
+              <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Intelligence</span>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      {/* THE INTELLIGENCE DASHBOARD */}
-      <section className="bg-zinc-50/50 min-h-[400px]">
-        <IntelligenceFeed />
-      </section>
+          {/* MISSION CONTROLS - PERSISTENT IN HEADER */}
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col items-end">
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${isLaunching ? 'bg-amber-400 animate-pulse' : isSwarmActive ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-300'}`}></span>
+                  <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest leading-none">
+                    {isLaunching ? 'DEPLOYING' : isStopping ? 'STOPPING' : isSwarmActive ? 'Active' : 'Standby'}
+                  </span>
+                </div>
+                {isSwarmActive && status?.progress && (
+                  <span className="text-[8px] font-bold text-zinc-300 uppercase tracking-tighter mt-1">
+                    Agents: {status.progress.pending}/{status.progress.total}
+                  </span>
+                )}
+              </div>
+            </div>
 
-      {/* SUBTLE BRANDING */}
-      <footer className="w-full p-8 flex justify-center border-t border-zinc-50 bg-white">
-        <p className="text-[10px] text-zinc-300 font-medium tracking-widest uppercase">
-          Secured by Institutional Parallel-Agent RL
-        </p>
-      </footer>
+            <div className="h-8 w-px bg-zinc-100" />
 
-    </main>
+            <div className="flex items-center gap-2">
+              {isSwarmActive ? (
+                <button
+                  onClick={() => stopSwarm()}
+                  disabled={isStopping}
+                  className="px-6 py-2 bg-white border border-rose-100 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-[0.15em] transition-all disabled:opacity-50"
+                >
+                  {isStopping ? 'Recalling...' : 'Abort Mission'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => launchSwarm()}
+                  disabled={isLaunching}
+                  className="px-6 py-2 bg-zinc-950 text-white rounded-lg text-[10px] font-black uppercase tracking-[0.15em] hover:bg-zinc-800 transition-all shadow-lg shadow-zinc-200 disabled:opacity-50"
+                >
+                  {isLaunching ? 'Deploying...' : 'Execute Intelligent Batch'}
+                </button>
+              )}
+            </div>
+          </div>
+        </nav>
+
+        {activeView === 'feed' ? (
+          <div className="bg-white">
+            {/* THE DASHBOARD SECTION */}
+            <div className="pb-24">
+              <IntelligenceFeed initialWing={activeDepartment} />
+            </div>
+
+            {/* LANDING EXTENSIONS (COMMUNITY & SERVICES) */}
+            {activeDepartment === 'all' && <LandingExtensions />}
+          </div>
+        ) : (
+          <div className="bg-[#F9FAFB] min-h-[calc(100vh-68px)]">
+            <SeriesViewer episodeId={selectedEpisodeId || ''} onBack={() => handleNavigate(activeDepartment, 'feed')} />
+          </div>
+        )}
+
+        {/* HIGH-END MINIMAL FOOTER */}
+        <footer className="w-full py-20 flex flex-col items-center border-t border-zinc-100 bg-white">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-6 h-6 bg-zinc-950 rounded flex items-center justify-center font-bold text-white text-[10px]">I</div>
+            <span className="text-sm font-bold tracking-tight text-zinc-950">Infomly Intelligence</span>
+          </div>
+          <p className="text-[10px] text-zinc-300 font-bold tracking-[0.4em] uppercase">
+            Sovereign Node 0x7F2 • Parallel-Agent RL Protocol
+          </p>
+        </footer>
+      </main>
+    </div>
   );
 }

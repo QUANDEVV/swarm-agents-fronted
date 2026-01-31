@@ -64,6 +64,6 @@ export const useFindings = (filters?: { wing?: string; sort?: string; min_confid
     return useQuery({
         queryKey: ['findings', filters],
         queryFn: () => swarmService.listFindings(filters),
-        refetchInterval: 10000, // Refresh every 10 seconds to see new reports
+        refetchInterval: 3000, // Refresh every 3 seconds for live thinking updates
     });
 };
